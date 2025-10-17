@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: projectbookapi-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: projectbookapi
+  template:
+    metadata:
+      labels:
+        app: projectbookapi
+    spec:
+      containers:
+        - name: projectbookapi
+          image: seyevans/bookprojectapi:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            # ⬇️ Database Name
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: bookdb-secret
+                  key: POSTGRES_DB
+
+            # ⬇️ Database User
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: bookdb-secret
+                  key: POSTGRES_USER
+
+            # ⬇️ Database Password
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: bookdb-secret
+                  key: POSTGRES_PASSWORD
+
+            # ⬇️ Database Connection URL (notice — using $(POSTGRES_DB) is safe *here* because
+            # Spring will expand it internally from env vars, not Kubernetes)
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/bookdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: projectbookapi-service
+spec:
+  selector:
+    app: projectbookapi
+  ports:
+    - port: 8081
+      targetPort: 8081
+      nodePort: 30081
+  type: NodePort
